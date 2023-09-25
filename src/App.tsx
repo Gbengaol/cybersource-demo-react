@@ -23,9 +23,12 @@ function App() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const data = await fetch("http://localhost:3001/api/capture-context", {
-        method: "get",
-      });
+      const data = await fetch(
+        `${import.meta.env.VITE_BASE_URL}/api/capture-context`,
+        {
+          method: "get",
+        }
+      );
       captureContext.current = await data.json();
 
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment

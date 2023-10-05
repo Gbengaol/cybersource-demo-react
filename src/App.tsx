@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useRef, useState } from "react";
 import "./App.css";
 
@@ -5,23 +7,27 @@ const styles = {
   input: {
     "font-size": "14px",
     "font-family": "helvetica, tahoma, calibri, sans-serif",
-    color: "#555",
+    color: "#999",
   },
   ":focus": { color: "blue" },
   ":disabled": { cursor: "not-allowed" },
   valid: { color: "#3c763d" },
-  invalid: { color: "#a94442" },
+  invalid: { color: "#ff0014" },
 };
 
 function App() {
+  const [isLoading, setIsLoading] = useState(false);
   const [expirationMonth, setExpirationMonth] = useState("");
   const [expirationYear, setExpirationYear] = useState("");
 
-  const payButton = document.querySelector("#pay-button");
-
+  const payButton = useRef<HTMLButtonElement | null>(null);
   const captureContext = useRef("");
 
+  const flex = useRef<any>(null);
+  const microform = useRef<any>(null);
+
   useEffect(() => {
+    setIsLoading(true);
     const fetchData = async () => {
       const data = await fetch(
         `${import.meta.env.VITE_BASE_URL}/api/capture-context`,
@@ -30,61 +36,62 @@ function App() {
         }
       );
       captureContext.current = await data.json();
-
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore
-      const flex = new Flex(captureContext.current);
-      const microform = flex.microform({ styles });
-      const number = microform.createField("number", {
+      flex.current = new Flex(captureContext.current);
+      microform.current = flex.current.microform({ styles });
+      const number = microform.current.createField("number", {
         placeholder: "Enter card number",
       });
-      const securityCode = microform.createField("securityCode", {
+      const securityCode = microform.current.createField("securityCode", {
         placeholder: "•••",
       });
       number.load("#number-container");
       securityCode.load("#securityCode-container");
-
-      payButton?.addEventListener("click", function () {
-        const options = {
-          expirationMonth,
-          expirationYear,
-        };
-        microform.createToken(options, (err: any, token: string) => {
-          if (err) {
-            alert(err.message);
-          } else {
-            alert(
-              `This is the token to be sent to the backend \n
-            ${JSON.stringify(token)}`
-            );
-          }
-        });
-      });
+      setIsLoading(false);
     };
 
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const handleSubmit = () => {
+    const options = {
+      expirationMonth,
+      expirationYear,
+    };
+    microform.current.createToken(options, (err: any, token: string) => {
+      if (err) {
+        console.log({ err });
+        alert(err.message);
+      } else {
+        alert(
+          `This is the token to be sent to the backend \n
+            ${JSON.stringify(token)}`
+        );
+      }
+    });
+  };
+
   return (
     <>
-      <div className="container card">
+      <div className="container card p-3 rounded-3">
+        <h3 className="text-uppercase text-secondary">CyberSource Demo</h3>
         <div className="card-body">
-          <div id="errors-output" role="alert"></div>
+          {isLoading && (
+            <div className="loader">
+              <span className="text-danger">
+                Loading form's capture context...
+              </span>
+              <div className="spinner-border text-danger" role="status"></div>
+            </div>
+          )}
           <form
             onSubmit={(e) => {
               e.preventDefault();
+              handleSubmit();
             }}
           >
             <div className="form-group">
-              <label htmlFor="cardholderName">Name</label>
-              <input
-                id="cardholderName"
-                className="form-control"
-                name="cardholderName"
-                placeholder="Name on the card"
-              />
-
               <label>Card Number</label>
               <div id="number-container" className="form-control" />
 
@@ -128,12 +135,21 @@ function App() {
               </div>
             </div>
 
+            <label htmlFor="cardholderName">Name</label>
+            <input
+              id="cardholderName"
+              className="form-control"
+              name="cardholderName"
+              placeholder="Name on the card"
+            />
+
             <button
               type="submit"
-              id="pay-button"
-              className="mt-3 btn btn-primary"
+              ref={payButton}
+              disabled={isLoading}
+              className="btn btn-primary w-100 mt-3"
             >
-              Pay
+              Pay 2500 CFA
             </button>
           </form>
         </div>
